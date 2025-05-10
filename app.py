@@ -10,6 +10,7 @@ from collections import deque
 import cv2 as cv
 import numpy as np
 import mediapipe as mp
+import pyautogui  # Added pyautogui for mouse control
 
 from utils import CvFpsCalc
 from model import KeyPointClassifier
@@ -31,6 +32,10 @@ def get_args():
                         help='min_tracking_confidence',
                         type=int,
                         default=0.5)
+    parser.add_argument("--sensitivity",
+                        help='mouse movement sensitivity',
+                        type=float,
+                        default=5)
 
     args = parser.parse_args()
 
@@ -78,6 +83,16 @@ def main():
     # FPS Measurement ########################################################
     cvFpsCalc = CvFpsCalc(buffer_len=10)
 
+    # Get screen resolution for mouse movement
+    screen_width, screen_height = pyautogui.size()
+    
+    # Variables for cursor control
+    prev_finger_x, prev_finger_y = None, None  # Previous finger position
+    sensitivity = args.sensitivity  # Get initial sensitivity from command line args
+    
+    # For smoothing mouse movement
+    smoothing = 0.3  # Lower values = more smoothing
+
     #  ########################################################################
     mode = 0
 
@@ -88,6 +103,14 @@ def main():
         key = cv.waitKey(10)
         if key == 27:  # ESC
             break
+        # Adjust sensitivity with + and - keys
+        if key == 43 or key == 61:  # + key (both with and without shift)
+            sensitivity += 0.1
+            print(f"Sensitivity increased to: {sensitivity:.1f}")
+        if key == 45:  # - key
+            sensitivity = max(0.1, sensitivity - 0.1)  # Prevent negative sensitivity
+            print(f"Sensitivity decreased to: {sensitivity:.1f}")
+            
         number, mode = select_mode(key, mode)
 
         # Camera capture #####################################################
@@ -122,6 +145,44 @@ def main():
 
                 # Hand sign classification
                 hand_sign_id = keypoint_classifier(pre_processed_landmark_list)
+                
+                # Get the label for the current hand sign
+                hand_sign_label = keypoint_classifier_labels[hand_sign_id]
+                
+                # Move mouse cursor if the detected hand sign is 'Gun'
+                if hand_sign_label == 'Gun':
+                    # Use index finger tip (landmark 8) for cursor control
+                    index_finger_tip = landmark_list[8]
+                    current_finger_x, current_finger_y = index_finger_tip[0], index_finger_tip[1]
+                    
+                    if prev_finger_x is not None and prev_finger_y is not None:
+                        # Calculate the movement delta (how much the finger moved)
+                        delta_x = (current_finger_x - prev_finger_x) * sensitivity
+                        delta_y = (current_finger_y - prev_finger_y) * sensitivity
+                        
+                        # Get current mouse position
+                        current_mouse_x, current_mouse_y = pyautogui.position()
+                        
+                        # Calculate new mouse position based on the delta movement
+                        new_mouse_x = current_mouse_x + delta_x
+                        new_mouse_y = current_mouse_y + delta_y
+                        
+                        # Keep cursor within screen bounds
+                        new_mouse_x = max(0, min(new_mouse_x, screen_width))
+                        new_mouse_y = max(0, min(new_mouse_y, screen_height))
+                        
+                        # Move the mouse cursor
+                        pyautogui.moveTo(new_mouse_x, new_mouse_y)
+                        
+                        # Visual feedback that cursor control is active
+                        cv.putText(debug_image, f"Cursor Control Active (dx={delta_x:.1f}, dy={delta_y:.1f})", 
+                                  (10, 120), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv.LINE_AA)
+                    
+                    # Update previous finger position
+                    prev_finger_x, prev_finger_y = current_finger_x, current_finger_y
+                else:
+                    # Reset previous position if hand sign changes
+                    prev_finger_x, prev_finger_y = None, None
 
                 # Drawing part
                 debug_image = draw_bounding_rect(use_brect, debug_image, brect)
@@ -132,8 +193,11 @@ def main():
                     handedness,
                     keypoint_classifier_labels[hand_sign_id],
                 )
+        else:
+            # Reset previous position if no hand is detected
+            prev_finger_x, prev_finger_y = None, None
 
-        debug_image = draw_info(debug_image, fps, mode, number)
+        debug_image = draw_info(debug_image, fps, mode, number, sensitivity)
 
         # Screen reflection #############################################################
         cv.imshow('Hand Gesture Recognition', debug_image)
@@ -435,11 +499,20 @@ def draw_info_text(image, brect, handedness, hand_sign_text):
     return image
 
 
-def draw_info(image, fps, mode, number):
+def draw_info(image, fps, mode, number, sensitivity=None):
     cv.putText(image, "FPS:" + str(fps), (10, 30), cv.FONT_HERSHEY_SIMPLEX,
                1.0, (0, 0, 0), 4, cv.LINE_AA)
     cv.putText(image, "FPS:" + str(fps), (10, 30), cv.FONT_HERSHEY_SIMPLEX,
                1.0, (255, 255, 255), 2, cv.LINE_AA)
+               
+    # Display current sensitivity if provided
+    if sensitivity is not None:
+        cv.putText(image, f"Sensitivity: {sensitivity:.1f}", (10, 60), 
+                  cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 4, cv.LINE_AA)
+        cv.putText(image, f"Sensitivity: {sensitivity:.1f}", (10, 60), 
+                  cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv.LINE_AA)
+        cv.putText(image, "Press + to increase, - to decrease", (10, 85),
+                  cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv.LINE_AA)
 
     mode_string = ['Logging Key Point']
     if mode == 1:
