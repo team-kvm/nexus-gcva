@@ -32,11 +32,12 @@ class ScrollController:
 
             # If horizontal movement is significant, scroll horizontally
             elif abs(dx) > self.threshold:
-                # Scroll right if dx > 0, left if dx < 0
-                pyautogui.hscroll(self.scroll_amount if dx > 0 else -self.scroll_amount)
-                direction = 'Right' if dx > 0 else 'Left'
-                cv.putText(debug_image, f"Scroll {direction}", (10, 150),
-                           cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+                # Shift + Scroll as horizontal scroll
+                pyautogui.keyDown('shift')
+                pyautogui.scroll(-self.scroll_amount if dx > 0 else self.scroll_amount)
+                pyautogui.keyUp('shift')
+                cv.putText(debug_image, f"Scroll {'Right' if dx > 0 else 'Left'}", (10, 150),
+                           cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
 
         # Update previous wrist position for the next iteration
         self.prev_wrist_x = current_x
