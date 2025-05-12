@@ -35,7 +35,11 @@ def get_args():
     parser.add_argument("--sensitivity",
                         help='mouse movement sensitivity',
                         type=float,
-                        default=5)
+                        default=3)
+    parser.add_argument("--click_cooldown",
+                        help='minimum time between clicks in seconds',
+                        type=float,
+                        default=0.5)
 
     args = parser.parse_args()
 
@@ -57,8 +61,8 @@ def main():
     use_brect = True
 
     # Camera preparation ###############################################################
-    # cap = cv.VideoCapture(cap_device)
-    cap = cv.VideoCapture(1, cv.CAP_DSHOW)
+    cap = cv.VideoCapture(cap_device)
+    # cap = cv.VideoCapture(1, cv.CAP_DSHOW)
     cap.set(cv.CAP_PROP_FRAME_WIDTH, cap_width)
     cap.set(cv.CAP_PROP_FRAME_HEIGHT, cap_height)
 
@@ -93,6 +97,18 @@ def main():
     
     # For smoothing mouse movement
     smoothing = 0.3  # Lower values = more smoothing
+    
+    # For click tracking
+    import time
+    last_left_click_time = 0
+    last_right_click_time = 0
+    click_cooldown = args.click_cooldown  # Cooldown period to prevent multiple clicks
+    
+    # Track finger state for gesture recognition
+    index_finger_dipped = False
+    middle_finger_dipped = False
+    prev_index_finger_dipped = False
+    prev_middle_finger_dipped = False
 
     #  ########################################################################
     mode = 0
@@ -149,13 +165,23 @@ def main():
                 
                 # Get the label for the current hand sign
                 hand_sign_label = keypoint_classifier_labels[hand_sign_id]
-                
+
+                # Index finger and middle finger positions (needed for both gestures)
+                index_finger_tip = landmark_list[8]
+                index_finger_pip = landmark_list[6]  # PIP joint of index finger
+                middle_finger_tip = landmark_list[12]
+                middle_finger_pip = landmark_list[10]  # PIP joint of middle finger
+
+                current_finger_x, current_finger_y = index_finger_tip[0], index_finger_tip[1]
+
+                # Detect if index finger is dipped (tip below PIP joint)
+                index_finger_dipped = index_finger_tip[1] > index_finger_pip[1]
+
+                # Detect if middle finger is dipped (tip below PIP joint)
+                middle_finger_dipped = middle_finger_tip[1] > middle_finger_pip[1]
+
                 # Move mouse cursor if the detected hand sign is 'Gun'
                 if hand_sign_label == 'Gun':
-                    # Use index finger tip (landmark 8) for cursor control
-                    index_finger_tip = landmark_list[8]
-                    current_finger_x, current_finger_y = index_finger_tip[0], index_finger_tip[1]
-                    
                     if prev_finger_x is not None and prev_finger_y is not None:
                         # Calculate the movement delta (how much the finger moved)
                         delta_x = (current_finger_x - prev_finger_x) * sensitivity
@@ -176,14 +202,42 @@ def main():
                         pyautogui.moveTo(new_mouse_x, new_mouse_y)
                         
                         # Visual feedback that cursor control is active
-                        cv.putText(debug_image, f"Cursor Control Active (dx={delta_x:.1f}, dy={delta_y:.1f})", 
+                        cv.putText(debug_image, f"Movement Active", 
                                   (10, 120), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv.LINE_AA)
                     
                     # Update previous finger position
                     prev_finger_x, prev_finger_y = current_finger_x, current_finger_y
+
+                # Handle clicks if the detected hand sign is 'Cursor'
+                elif hand_sign_label == 'Cursor':
+                    current_time = time.time()
+                    
+                    # Left click when index finger is dipped
+                    if index_finger_dipped and not prev_index_finger_dipped:
+                        if current_time - last_left_click_time > click_cooldown:
+                            pyautogui.click()  # Left click
+                            last_left_click_time = current_time
+                            cv.putText(debug_image, "Left Click", (10, 150), 
+                                      cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv.LINE_AA)
+                    
+                    # Right click when middle finger is dipped
+                    if middle_finger_dipped and not prev_middle_finger_dipped:
+                        if current_time - last_right_click_time > click_cooldown:
+                            pyautogui.rightClick()  # Right click
+                            last_right_click_time = current_time
+                            cv.putText(debug_image, "Right Click", (10, 180), 
+                                      cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv.LINE_AA)
+                    
+                    # Visual feedback that click control is active
+                    cv.putText(debug_image, f"Click Control Active", 
+                              (10, 120), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv.LINE_AA)
                 else:
-                    # Reset previous position if hand sign changes
+                    # Reset previous position and finger states if hand sign changes
                     prev_finger_x, prev_finger_y = None, None
+
+                # Always update previous finger dip states (needed for both gestures)
+                prev_index_finger_dipped = index_finger_dipped
+                prev_middle_finger_dipped = middle_finger_dipped
 
                 # Drawing part
                 debug_image = draw_bounding_rect(use_brect, debug_image, brect)
@@ -194,11 +248,7 @@ def main():
                     handedness,
                     keypoint_classifier_labels[hand_sign_id],
                 )
-        else:
-            # Reset previous position if no hand is detected
-            prev_finger_x, prev_finger_y = None, None
-
-        debug_image = draw_info(debug_image, fps, mode, number, sensitivity)
+                debug_image = draw_info(debug_image, fps, mode, number, sensitivity)
 
         # Screen reflection #############################################################
         cv.imshow('Hand Gesture Recognition', debug_image)
@@ -506,7 +556,6 @@ def draw_info(image, fps, mode, number, sensitivity=None):
     cv.putText(image, "FPS:" + str(fps), (10, 30), cv.FONT_HERSHEY_SIMPLEX,
                1.0, (255, 255, 255), 2, cv.LINE_AA)
                
-    '''
     # Display current sensitivity if provided
     if sensitivity is not None:
         cv.putText(image, f"Sensitivity: {sensitivity:.1f}", (10, 60), 
@@ -515,7 +564,12 @@ def draw_info(image, fps, mode, number, sensitivity=None):
                   cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv.LINE_AA)
         cv.putText(image, "Press + to increase, - to decrease", (10, 85),
                   cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv.LINE_AA)
-    '''
+    
+    # Add help text for clicks
+    cv.putText(image, "Dip index finger for left click", (10, 220),
+              cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv.LINE_AA)
+    cv.putText(image, "Dip middle finger for right click", (10, 240),
+              cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv.LINE_AA)
 
     mode_string = ['Logging Key Point']
     if mode == 1:
