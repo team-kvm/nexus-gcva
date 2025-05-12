@@ -2,13 +2,13 @@ import argparse
 import copy
 import cv2 as cv
 from utils import setup_camera
-from hands import HandDetector
-from gesture_controller import GestureController
+from core import HandDetector
+from controller import GestureController
 from utils import FpsCalculator
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--device", type=int, default=1)
+    parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--width", type=int, default=960)
     parser.add_argument("--height", type=int, default=540)
     parser.add_argument('--use_static_image_mode', action='store_true')

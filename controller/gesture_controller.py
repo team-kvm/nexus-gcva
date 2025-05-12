@@ -12,7 +12,7 @@ from utils import (
     calc_bounding_rect,
     pre_process_landmark,
 )
-from mouse import MouseController
+from core import MouseController
 
 class GestureController:
     def __init__(self, args):
