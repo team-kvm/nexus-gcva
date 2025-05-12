@@ -57,7 +57,8 @@ def main():
     use_brect = True
 
     # Camera preparation ###############################################################
-    cap = cv.VideoCapture(cap_device)
+    # cap = cv.VideoCapture(cap_device)
+    cap = cv.VideoCapture(1, cv.CAP_DSHOW)
     cap.set(cv.CAP_PROP_FRAME_WIDTH, cap_width)
     cap.set(cv.CAP_PROP_FRAME_HEIGHT, cap_height)
 
@@ -505,6 +506,7 @@ def draw_info(image, fps, mode, number, sensitivity=None):
     cv.putText(image, "FPS:" + str(fps), (10, 30), cv.FONT_HERSHEY_SIMPLEX,
                1.0, (255, 255, 255), 2, cv.LINE_AA)
                
+    '''
     # Display current sensitivity if provided
     if sensitivity is not None:
         cv.putText(image, f"Sensitivity: {sensitivity:.1f}", (10, 60), 
@@ -513,6 +515,7 @@ def draw_info(image, fps, mode, number, sensitivity=None):
                   cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv.LINE_AA)
         cv.putText(image, "Press + to increase, - to decrease", (10, 85),
                   cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv.LINE_AA)
+    '''
 
     mode_string = ['Logging Key Point']
     if mode == 1:
