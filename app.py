@@ -1,10 +1,9 @@
 import argparse
 import copy
 import cv2 as cv
-from utils import setup_camera
+from utils import setup_camera, FpsCalculator
 from core import HandDetector
 from controller import GestureController
-from utils import FpsCalculator
 
 def get_args():
     parser = argparse.ArgumentParser()

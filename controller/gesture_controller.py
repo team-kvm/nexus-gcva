@@ -12,7 +12,7 @@ from utils import (
     calc_bounding_rect,
     pre_process_landmark,
 )
-from core import MouseController, VolumeController, BrightnessController
+from core import MouseController, VolumeController, BrightnessController, ScrollController
 
 class GestureController:
     def __init__(self, args):
@@ -24,6 +24,7 @@ class GestureController:
 
         self.volume = VolumeController()
         self.brightness = BrightnessController()
+        self.scroll_ctrl = ScrollController()
         self.super_prev_x = None
         self.super_prev_y = None
         self.super_threshold = 10
@@ -102,13 +103,16 @@ class GestureController:
                     if self.mouse.click_right(now):
                         cv2.putText(image, "Right Click", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
                 cv2.putText(image, "Click Control Active", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            elif label == 'Super' and handedness.classification[0].label == "Right":
-                self.handle_super_mode_right(image, landmark_list[0])
-                cv2.putText(image, f"Brightness: {self.brightness.get_brightness_percent()}%", (10, 180),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                cv2.putText(image, f"Volume: {self.volume.get_volume_percent()}%", (10, 150),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-
+            elif label == 'Super':
+                if handedness.classification[0].label == "Right":
+                    self.handle_super_mode_right(image, landmark_list[0])
+                    cv2.putText(image, f"Brightness: {self.brightness.get_brightness_percent()}%", (10, 180),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+                    cv2.putText(image, f"Volume: {self.volume.get_volume_percent()}%", (10, 150),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+                    self.scroll_ctrl.reset()
+                else:
+                    self.scroll_ctrl.scroll(image, landmark_list[0])
 
             self.prev_index_dipped = index_dipped
             self.prev_middle_dipped = middle_dipped
