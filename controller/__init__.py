@@ -1,1 +1,2 @@
 from controller.gesture_controller import GestureController
+from controller.voice_controller import VoiceController

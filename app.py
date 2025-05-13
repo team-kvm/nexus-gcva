@@ -4,6 +4,7 @@ import cv2 as cv
 from utils import setup_camera, FpsCalculator
 from core import HandDetector
 from controller import GestureController
+from voice import ChatBot
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -21,7 +22,8 @@ def main():
     args = get_args()
     cap = setup_camera(args.device, args.width, args.height)
     detector = HandDetector(args)
-    controller = GestureController(args)
+    chat_bot_instance = ChatBot()
+    controller = GestureController(args, chat_bot_instance)
     fps_calc = FpsCalculator(buffer_len=10)
 
     while True:

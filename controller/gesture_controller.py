@@ -2,6 +2,8 @@ import csv
 import cv2
 import time
 import pyautogui
+import threading
+import time
 from model import KeyPointClassifier
 from utils import (
     draw_info,
@@ -13,9 +15,10 @@ from utils import (
     pre_process_landmark,
 )
 from core import MouseController, VolumeController, BrightnessController, ScrollController
+from controller.voice_controller import VoiceController
 
 class GestureController:
-    def __init__(self, args):
+    def __init__(self, args, chat_bot_instance):
         self.sensitivity = args.sensitivity
         self.click_cooldown = args.click_cooldown
         self.screen_width, self.screen_height = pyautogui.size()
@@ -38,6 +41,11 @@ class GestureController:
         self.prev_finger_y = None
         self.mode = 0
         self.number = -1
+
+        self.voice_controller = VoiceController(chat_bot_instance)
+        self.voice_thread = threading.Thread(target=self.voice_controller.chat_bot_instance.start)
+        self.is_voice_control_active = False
+        self.is_listening = False
 
     def increase_sensitivity(self):
         self.sensitivity += 0.1
@@ -113,6 +121,27 @@ class GestureController:
                     self.scroll_ctrl.reset()
                 else:
                     self.scroll_ctrl.scroll(image, landmark_list[0])
+            elif label == "Fist" and not self.is_voice_control_active and not self.is_listening:
+                    self.is_voice_control_active = True
+                    self.is_listening = True
+
+                    if not self.voice_controller.chat_bot_instance.started:
+                        self.voice_thread = threading.Thread(
+                            target=self.voice_controller.chat_bot_instance.start,
+                            daemon=True  # optional: allows clean exit with main program
+                        )
+                        self.voice_thread.start()
+
+                        while not self.voice_controller.chat_bot_instance.started:
+                            time.sleep(0.5)
+
+                        self.voice_controller.wish()
+
+                    voice_data = self.voice_controller.record_audio()
+                    self.voice_controller.respond(voice_data)
+            elif label == "Open":
+                    self.is_listening = False
+                    self.is_voice_control_active = False
 
             self.prev_index_dipped = index_dipped
             self.prev_middle_dipped = middle_dipped
