@@ -98,7 +98,7 @@ class VoiceController:
             temp_audio = self.record_audio()
             self.chat_bot_instance.addUserMsg(temp_audio)
             self.reply('Locating...')
-            url = 'https://google.com/maps/place/' + temp_audio
+            url = 'https://google.com/maps/search/' + temp_audio
             try:
                 webbrowser.open(url)
                 self.reply('This is what I found for you, sir')
