@@ -6,6 +6,7 @@ class MouseController:
         self.cooldown = cooldown
         self.last_left_click = 0
         self.last_right_click = 0
+        self.last_double_click = 0
         self.screen_width, self.screen_height = pyautogui.size()
 
     def set_sensitivity(self, sensitivity):
@@ -37,3 +38,9 @@ class MouseController:
             return True
         return False
 
+    def double_click(self, current_time):
+        if current_time - self.last_double_click > self.cooldown:
+            pyautogui.doubleClick()
+            self.last_double_click = current_time
+            return True
+        return False
