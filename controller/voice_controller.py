@@ -44,7 +44,7 @@ class VoiceController:
             self.reply("Good Afternoon!")
         else:
             self.reply("Good Evening!")
-        self.reply("I am JARVIS, how may I help you sir?")
+        self.reply("I am Nexus, how may I help you sir?")
 
     def record_audio(self):
         with sr.Microphone() as source:
@@ -61,7 +61,7 @@ class VoiceController:
             return ''
 
     def respond(self, voice_data):
-        voice_data = voice_data.replace('jarvis', '').strip()
+        voice_data = voice_data.replace('nexus', '').strip()
         print(f"Processing command: {voice_data}")
         self.chat_bot_instance.addUserMsg(voice_data)
 
@@ -75,7 +75,7 @@ class VoiceController:
             self.wish()
 
         elif 'what is your name' in voice_data:
-            self.reply('My name is JARVIS!')
+            self.reply('My name is NEXUS!')
 
         elif 'date' in voice_data:
             self.reply(self.today.strftime("%B %d, %Y"))
