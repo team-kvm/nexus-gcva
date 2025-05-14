@@ -104,12 +104,17 @@ class GestureController:
                 self.prev_finger_x, self.prev_finger_y = index_tip[0], index_tip[1]
             elif label == 'Cursor':
                 now = time.time()
-                if index_dipped and not self.prev_index_dipped:
-                    if self.mouse.click_left(now):
-                        cv2.putText(image, "Left Click", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                if middle_dipped and not self.prev_middle_dipped:
-                    if self.mouse.click_right(now):
-                        cv2.putText(image, "Right Click", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                if index_dipped and middle_dipped and not self.prev_index_dipped and not self.prev_middle_dipped:
+                    if self.mouse.double_click(now):
+                        cv2.putText(image, "Double Click", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+                else:
+                    if index_dipped and not self.prev_index_dipped:
+                        if self.mouse.click_left(now):
+                            cv2.putText(image, "Left Click", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                    if middle_dipped and not self.prev_middle_dipped:
+                        if self.mouse.click_right(now):
+                            cv2.putText(image, "Right Click", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            
                 cv2.putText(image, "Click Control Active", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             elif label == 'Super':
                 if handedness.classification[0].label == "Right":
