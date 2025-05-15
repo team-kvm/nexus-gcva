@@ -3,7 +3,6 @@ import cv2
 import time
 import pyautogui
 import threading
-import time
 from model import KeyPointClassifier
 from utils import (
     draw_info,

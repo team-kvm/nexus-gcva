@@ -105,10 +105,6 @@ class VoiceController:
             except:
                 self.reply('Please check your Internet connection, sir')
 
-        elif 'bye' in voice_data or 'by' in voice_data:
-            self.is_awake = False
-            self.reply("Goodbye sir! Have a nice day.")
-
         elif 'exit' in voice_data or 'terminate' in voice_data:
             self.chat_bot_instance.close()
             sys.exit()
